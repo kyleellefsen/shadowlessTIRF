@@ -48,7 +48,11 @@ from PyQt4.QtGui import * # Qt is Nokias GUI rendering code written in C++.  PyQ
 from PyQt4.QtCore import *
 from PyQt4.QtCore import pyqtSignal as Signal
 from PyQt4.QtCore import pyqtSlot  as Slot
-import cPickle as pickle
+import sys
+if sys.version_info.major==2:
+    import cPickle as pickle # pickle serializes python objects so they can be saved persistantly.  It converts a python object into a savable data structure
+else:
+    import pickle
 import os, time
 from os.path import expanduser
 

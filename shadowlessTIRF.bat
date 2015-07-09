@@ -1,1 +1,1 @@
-C:\Python27\python %~dp0\shadowlessTIRF.py
+python %~dp0\shadowlessTIRF.py
