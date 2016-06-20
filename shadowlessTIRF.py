@@ -11,7 +11,7 @@ To view pins, look at http://www.ni.com/pdf/manuals/371232b.pdf figure 4.
 - Pin 57 (ao2) is the sine wave.  
 - Pin 25 (ao3) is the cosine wave.  
 - Pin 60 (ao4) is the ttl pulse which is which is triggered at the beginning of every period and should be plugged into Pin 1 (top right) of the Cascade Photometrics Model 128 camera. 
-- Pin 69 (analog ground) should be plugged into Pin 6 of the Camera. 
+- Pin 69 (analog ground) should be plugged into Pin 3 of the Camera (top, third pin from right). 
 
 The blue laser is pin 28 (ao5). Ground is pin 29.
 The green laser is pin 30 (ao6).  Ground is pin 31.
@@ -25,7 +25,7 @@ Open MetaMorph.  In MetaMorph:
     Acquire->Stream Acquisition->Camera Parameters
         Aquisition Mode: Acquire images from each extrnal trigger
         Make sure, if you check 'Display preview image during acquisition', that you aren't updating too often, or you will miss frames.
-    
+
     
 LASER CONTROL:
 WIRES:
