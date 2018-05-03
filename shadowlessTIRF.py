@@ -37,24 +37,17 @@ Green laser is active low
 Blue laser is active high
 Blue laser requires "Digital:Power" mode in 'Coherent Connection' software to be operated via ttl pulse.
 """
-from __future__ import division
-import os
+import os, sys, time
+from os.path import expanduser
 os.chdir(os.path.split(os.path.realpath(__file__))[0])
-import dependency_check
 from PyDAQmx import *
 from PyDAQmx.DAQmxCallBack import *
 import numpy as np
-from PyQt4.QtGui import * # Qt is Nokias GUI rendering code written in C++.  PyQt4 is a library in python which binds to Qt
-from PyQt4.QtCore import *
-from PyQt4.QtCore import pyqtSignal as Signal
-from PyQt4.QtCore import pyqtSlot  as Slot
-import sys
-if sys.version_info.major==2:
-    import cPickle as pickle # pickle serializes python objects so they can be saved persistantly.  It converts a python object into a savable data structure
-else:
-    import pickle
-import os, time
-from os.path import expanduser
+from qtpy.QtWidgets import *
+from qtpy.QtGui import *
+from qtpy.QtCore import *
+from qtpy.QtCore import Signal, Slot
+import pickle
 
 
 class Settings:
@@ -107,11 +100,11 @@ class GalvoDriver(QWidget):
         self.hide()
     def createTask(self):
         self.analog_output = Task()
-        self.analog_output.CreateAOVoltageChan("Dev2/ao2","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao2 is pin 57 and ground is 56
-        self.analog_output.CreateAOVoltageChan("Dev2/ao3","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao3 is pin 25 and ground is 24
-        self.analog_output.CreateAOVoltageChan("Dev2/ao4","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao4 is pin 60 and ground is 59
-        self.analog_output.CreateAOVoltageChan("Dev2/ao5","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao5 is pin 28 and ground is 29. This is blue laser
-        self.analog_output.CreateAOVoltageChan("Dev2/ao6","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao6 is pin 30 and ground is 31. This is green laser
+        self.analog_output.CreateAOVoltageChan("Dev1/ao0","",-10.0,10.0,DAQmx_Val_Volts,None) # sine wave
+        self.analog_output.CreateAOVoltageChan("Dev1/ao1","",-10.0,10.0,DAQmx_Val_Volts,None) # cosine wave
+        # self.analog_output.CreateAOVoltageChan("Dev1/ao4","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao4 is pin 60 and ground is 59
+        # self.analog_output.CreateAOVoltageChan("Dev1/ao5","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao5 is pin 28 and ground is 29. This is blue laser
+        # self.analog_output.CreateAOVoltageChan("Dev1/ao6","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao6 is pin 30 and ground is 31. This is green laser
 
 
                         #  CfgSampClkTiming(source, rate, activeEdge, sampleMode, sampsPerChan)
@@ -140,26 +133,12 @@ class GalvoDriver(QWidget):
             camera_ttl[0]=5
         camera_ttl=np.zeros(len(t))
         camera_ttl[0]=5
-        if blue_laser:
-            blue_laser_ttl=blue_laser_power*np.ones(len(t))
-            #a=len(t)
-            #blue_laser_ttl[a/8:3*a/8]=blue_laser_power #right
-            #blue_laser_ttl[3*a/8:5*a/8]=blue_laser_power #bottom
-            #blue_laser_ttl[5*a/8:7*a/8]=blue_laser_power #left
-            #blue_laser_ttl[:a/8]=blue_laser_power; blue_laser_ttl[7*a/8:]=blue_laser_power #top
-            
-        else:
-            blue_laser_ttl=-.08*np.ones(len(t))
-        if green_laser:
-            green_laser_ttl=green_laser_power*np.ones(len(t)) #0V is on for green laser
-        else:
-            green_laser_ttl=-.08*np.ones(len(t)) #5V is off for green laser
-        return sinwave,coswave,camera_ttl, blue_laser_ttl, green_laser_ttl
+        return sinwave, coswave
     def calculate(self):
         s=self.settings
         if s['alternate12'] is False and s['alternate123'] is False:
-            sinwave,coswave,camera_ttl,blue_laser_ttl, green_laser_ttl=self.getSinCosTTL(s['frequency'],s['radius'],s['ellipticity'],s['phase'],s['x_shift'],s['y_shift'],s['blue_laser'],s['green_laser'],s['blue_laser_power'],s['green_laser_power'])
-            self.data=np.concatenate((sinwave,coswave,camera_ttl,blue_laser_ttl,green_laser_ttl))
+            sinwave, coswave = self.getSinCosTTL(s['frequency'],s['radius'],s['ellipticity'],s['phase'],s['x_shift'],s['y_shift'],s['blue_laser'],s['green_laser'],s['blue_laser_power'],s['green_laser_power'])
+            self.data=np.concatenate((sinwave,coswave))
             self.sampsPerPeriod=len(sinwave)
         elif s['alternate12']:
             f1=s.d[1]['frequency']
@@ -172,9 +151,9 @@ class GalvoDriver(QWidget):
                 period1=1/f1; period2=period1
             else:
                 period1=1/f1; period2=1/f2
-            sinwave1,coswave1,camera_ttl1,blue_laser_ttl1,green_laser_ttl1=self.getSinCosTTL(f1,s.d[1]['radius'],s.d[1]['ellipticity'],s.d[1]['phase'],s.d[1]['x_shift'],s.d[1]['y_shift'],s.d[1]['blue_laser'],s.d[1]['green_laser'],s.d[1]['blue_laser_power'],s.d[1]['green_laser_power'],period1)
-            sinwave2,coswave2,camera_ttl2,blue_laser_ttl2,green_laser_ttl2=self.getSinCosTTL(f2,s.d[2]['radius'],s.d[2]['ellipticity'],s.d[2]['phase'],s.d[2]['x_shift'],s.d[2]['y_shift'],s.d[2]['blue_laser'],s.d[2]['green_laser'],s.d[2]['blue_laser_power'],s.d[2]['green_laser_power'],period2)
-            self.data=np.concatenate((sinwave1,sinwave2,coswave1,coswave2,camera_ttl1,camera_ttl2,blue_laser_ttl1,blue_laser_ttl2,green_laser_ttl1,green_laser_ttl2))
+            sinwave1, coswave1 = self.getSinCosTTL(f1,s.d[1]['radius'],s.d[1]['ellipticity'],s.d[1]['phase'],s.d[1]['x_shift'],s.d[1]['y_shift'],s.d[1]['blue_laser'],s.d[1]['green_laser'],s.d[1]['blue_laser_power'],s.d[1]['green_laser_power'],period1)
+            sinwave2, coswave2 = self.getSinCosTTL(f2,s.d[2]['radius'],s.d[2]['ellipticity'],s.d[2]['phase'],s.d[2]['x_shift'],s.d[2]['y_shift'],s.d[2]['blue_laser'],s.d[2]['green_laser'],s.d[2]['blue_laser_power'],s.d[2]['green_laser_power'],period2)
+            self.data=np.concatenate((sinwave1,sinwave2,coswave1,coswave2))
             self.sampsPerPeriod=len(sinwave1)+len(sinwave2)
         elif s['alternate123']:
             f1=s.d[1]['frequency']
@@ -196,11 +175,11 @@ class GalvoDriver(QWidget):
                 period1=1/f1; period2=1/f2; period3=period1
             else:
                 period1=1/f1; period2=1/f2; period3=1/f3
-            sinwave1,coswave1,camera_ttl1,blue_laser_ttl1,green_laser_ttl1=self.getSinCosTTL(f1,s.d[1]['radius'],s.d[1]['ellipticity'],s.d[1]['phase'],s.d[1]['x_shift'],s.d[1]['y_shift'],s.d[1]['blue_laser'],s.d[1]['green_laser'],s.d[1]['blue_laser_power'],s.d[1]['green_laser_power'],period1)
-            sinwave2,coswave2,camera_ttl2,blue_laser_ttl2,green_laser_ttl2=self.getSinCosTTL(f2,s.d[2]['radius'],s.d[2]['ellipticity'],s.d[2]['phase'],s.d[2]['x_shift'],s.d[2]['y_shift'],s.d[2]['blue_laser'],s.d[2]['green_laser'],s.d[2]['blue_laser_power'],s.d[2]['green_laser_power'],period2)
-            sinwave3,coswave3,camera_ttl3,blue_laser_ttl3,green_laser_ttl3=self.getSinCosTTL(f3,s.d[3]['radius'],s.d[3]['ellipticity'],s.d[3]['phase'],s.d[3]['x_shift'],s.d[3]['y_shift'],s.d[3]['blue_laser'],s.d[3]['green_laser'],s.d[3]['blue_laser_power'],s.d[3]['green_laser_power'],period3)
-            self.data=np.concatenate((sinwave1,sinwave2,sinwave3,coswave1,coswave2,coswave3,camera_ttl1,camera_ttl2,camera_ttl3,blue_laser_ttl1,blue_laser_ttl2,blue_laser_ttl3,green_laser_ttl1,green_laser_ttl2,green_laser_ttl3))
-            self.sampsPerPeriod=len(sinwave1)+len(sinwave2)+len(sinwave3)
+            sinwave1, coswave1=self.getSinCosTTL(f1,s.d[1]['radius'],s.d[1]['ellipticity'],s.d[1]['phase'],s.d[1]['x_shift'],s.d[1]['y_shift'],s.d[1]['blue_laser'],s.d[1]['green_laser'],s.d[1]['blue_laser_power'],s.d[1]['green_laser_power'],period1)
+            sinwave2, coswave2=self.getSinCosTTL(f2,s.d[2]['radius'],s.d[2]['ellipticity'],s.d[2]['phase'],s.d[2]['x_shift'],s.d[2]['y_shift'],s.d[2]['blue_laser'],s.d[2]['green_laser'],s.d[2]['blue_laser_power'],s.d[2]['green_laser_power'],period2)
+            sinwave3, coswave3=self.getSinCosTTL(f3,s.d[3]['radius'],s.d[3]['ellipticity'],s.d[3]['phase'],s.d[3]['x_shift'],s.d[3]['y_shift'],s.d[3]['blue_laser'],s.d[3]['green_laser'],s.d[3]['blue_laser_power'],s.d[3]['green_laser_power'],period3)
+            self.data = np.concatenate((sinwave1, sinwave2, sinwave3, coswave1, coswave2, coswave3))
+            self.sampsPerPeriod = len(sinwave1)+len(sinwave2)+len(sinwave3)
     def startstop(self):
         if self.stopped:
             self.analog_output.StartTask()
