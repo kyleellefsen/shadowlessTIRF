@@ -43,11 +43,43 @@ os.chdir(os.path.split(os.path.realpath(__file__))[0])
 from PyDAQmx import *
 from PyDAQmx.DAQmxCallBack import *
 import numpy as np
+from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtWidgets import *
 from qtpy.QtGui import *
 from qtpy.QtCore import *
 from qtpy.QtCore import Signal, Slot
 import pickle
+from ctypes import byref, c_int32
+from PyDAQmx_helper import getNIDevInfo
+
+
+def warning(text):
+    msgBox = QtWidgets.QMessageBox()
+    msgBox.setText(str(text))
+    msgBox.addButton(QtWidgets.QMessageBox.Ok)
+    msgBox.setDefaultButton(QtWidgets.QMessageBox.Ok)
+    ret = msgBox.exec_()
+    return ret
+
+dac_present = False
+def check_if_NI_devs_are_present():
+    global dac_present
+    NIDevInfo = getNIDevInfo()
+    if 'Dev1' not in NIDevInfo.keys(): # and 'Dev2' not in NIDevInfo.keys():
+        warning('Neither National Instruments Dev1 nor Dev2 can be detected. Open NI MAX and make sure the devices are present. Continuing in test mode.')
+    elif 'Dev1' not in NIDevInfo.keys():
+        warning('National Instruments Dev1 cannot be detected. Open NI MAX and make sure the device is present. Continuing in test mode.')
+    #elif 'Dev2' not in NIDevInfo.keys():
+    #    warning('National Instruments Dev2 cannot be detected. Open NI MAX and make sure the device is present. Continuing in test mode.')
+    elif NIDevInfo['Dev1']['product_type'] != 'USB-6211':
+        print('')
+        warning('National Instruments Dev1 is not USB-6211. Continuing in test mode.')
+    #elif NIDevInfo['Dev2']['product_type'] != 'USB-6001':
+    #    warning('National Instruments Dev2 is not USB-6001. Continuing in test mode.')
+    else:
+        dac_present=True
+    return dac_present
+
 
 
 class Settings:
@@ -92,7 +124,7 @@ class GalvoDriver(QWidget):
     def __init__(self,settings):
         QWidget.__init__(self)
         self.settings=settings
-        self.sample_rate=1000000 # Maximum for the NI PCI-6733 is 1MHz.
+        self.sample_rate=200000
         self.sampsPerPeriod=1 #dummy variable
         self.calculate()
         self.read = int32()
@@ -252,46 +284,104 @@ class GalvoDriver(QWidget):
 ##############################################################################
 ####   GRAPHICAL USER INTERFACE ##############################################
 ##############################################################################
-class SliderLabel(QWidget):
-    '''SliderLabel is a widget containing a QSlider and a QSpinBox (or QDoubleSpinBox if decimals are required)
+# class SliderLabel(QWidget):
+#     '''SliderLabel is a widget containing a QSlider and a QSpinBox (or QDoubleSpinBox if decimals are required)
+#     The QSlider and SpinBox are connected so that a change in one causes the other to change. 
+#     '''
+#     changeSignal=Signal(int)
+#     def __init__(self,decimals=0): #decimals specifies the resolution of the slider.  0 means only integers,  1 means the tens place, etc.
+#         QWidget.__init__(self)
+#         self.slider=QSlider(Qt.Horizontal)
+#         self.decimals=decimals
+#         if self.decimals<=0:
+#             self.label=QSpinBox()
+#         else:
+#             self.label=QDoubleSpinBox()
+#             self.label.setDecimals(self.decimals)
+#         self.layout=QHBoxLayout()
+#         self.layout.addWidget(self.slider)
+#         self.layout.addWidget(self.label)
+#         self.setLayout(self.layout)
+#         self.slider.valueChanged.connect(lambda val: self.updateLabel(val/10**self.decimals))
+#         self.label.valueChanged.connect(self.updateSlider)
+#         self.valueChanged=self.label.valueChanged
+#     @Slot(int, float)
+#     def updateSlider(self,value):
+#         self.slider.setValue(int(value*10**self.decimals))
+#     def updateLabel(self,value):
+#         self.label.setValue(value)
+#     def value(self):
+#         return self.label.value()
+#     def setRange(self,minn,maxx):
+#         self.slider.setRange(minn*10**self.decimals,maxx*10**self.decimals)
+#         self.label.setRange(minn,maxx)
+#     def setMinimum(self,minn):
+#         self.slider.setMinimum(minn*10**self.decimals)
+#         self.label.setMinimum(minn)
+#     def setMaximum(self,maxx):
+#         self.slider.setMaximum(maxx*10**self.decimals)
+#         self.label.setMaximum(maxx)
+#     def setValue(self,value):
+#         self.slider.setValue(value*10**self.decimals)
+#         self.label.setValue(value)
+
+class SliderLabel(QtWidgets.QWidget):
+    """
+    SliderLabel is a widget containing a QSlider and a QSpinBox (or QDoubleSpinBox if decimals are required)
     The QSlider and SpinBox are connected so that a change in one causes the other to change. 
-    '''
+    """
     changeSignal=Signal(int)
+
     def __init__(self,decimals=0): #decimals specifies the resolution of the slider.  0 means only integers,  1 means the tens place, etc.
-        QWidget.__init__(self)
-        self.slider=QSlider(Qt.Horizontal)
+        QtWidgets.QWidget.__init__(self)
+        self.slider=QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.decimals=decimals
-        if self.decimals<=0:
-            self.label=QSpinBox()
+        if self.decimals <= 0:
+            self.label = QtWidgets.QSpinBox()
         else:
-            self.label=QDoubleSpinBox()
+            self.label=QtWidgets.QDoubleSpinBox()
             self.label.setDecimals(self.decimals)
-        self.layout=QHBoxLayout()
+        self.layout=QtWidgets.QHBoxLayout()
         self.layout.addWidget(self.slider)
         self.layout.addWidget(self.label)
+        self.layout.setContentsMargins(0,0,0,0)
         self.setLayout(self.layout)
         self.slider.valueChanged.connect(lambda val: self.updateLabel(val/10**self.decimals))
         self.label.valueChanged.connect(self.updateSlider)
-        self.valueChanged=self.label.valueChanged
-    @Slot(int, float)
-    def updateSlider(self,value):
+        self.valueChanged = self.label.valueChanged
+
+    def updateSlider(self, value):
         self.slider.setValue(int(value*10**self.decimals))
+
     def updateLabel(self,value):
         self.label.setValue(value)
+
     def value(self):
         return self.label.value()
+
     def setRange(self,minn,maxx):
         self.slider.setRange(minn*10**self.decimals,maxx*10**self.decimals)
         self.label.setRange(minn,maxx)
+
     def setMinimum(self,minn):
         self.slider.setMinimum(minn*10**self.decimals)
         self.label.setMinimum(minn)
+
     def setMaximum(self,maxx):
         self.slider.setMaximum(maxx*10**self.decimals)
         self.label.setMaximum(maxx)
+
     def setValue(self,value):
         self.slider.setValue(value*10**self.decimals)
         self.label.setValue(value)
+
+    def setEnabled(self, bool):
+        self.slider.setEnabled(bool)
+        self.label.setEnabled(bool)
+    def setSingleStep(self,value):
+        self.label.setSingleStep(value)
+
+
 class FrequencySlider(SliderLabel):
     '''This is a modified SliderLabel class that prevents the user from setting a value between 0 and 1.  This controls the frequency of the sin wave.  Otherwise, the period could be too long, and you can only update any values at phase=0.
     '''
@@ -451,6 +541,7 @@ class MainGui(QWidget):
     
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    check_if_NI_devs_are_present()
     maingui=MainGui()
     sys.exit(app.exec_())
     
