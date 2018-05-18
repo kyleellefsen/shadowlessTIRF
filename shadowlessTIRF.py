@@ -65,17 +65,11 @@ dac_present = False
 def check_if_NI_devs_are_present():
     global dac_present
     NIDevInfo = getNIDevInfo()
-    if 'Dev1' not in NIDevInfo.keys(): # and 'Dev2' not in NIDevInfo.keys():
-        warning('Neither National Instruments Dev1 nor Dev2 can be detected. Open NI MAX and make sure the devices are present. Continuing in test mode.')
-    elif 'Dev1' not in NIDevInfo.keys():
-        warning('National Instruments Dev1 cannot be detected. Open NI MAX and make sure the device is present. Continuing in test mode.')
-    #elif 'Dev2' not in NIDevInfo.keys():
-    #    warning('National Instruments Dev2 cannot be detected. Open NI MAX and make sure the device is present. Continuing in test mode.')
-    elif NIDevInfo['Dev1']['product_type'] != 'USB-6211':
+    if 'Dev3' not in NIDevInfo.keys():
+        warning('National Instruments Dev3 cannot be detected. Open NI MAX and make sure the device is present. Continuing in test mode.')
+    elif NIDevInfo['Dev3']['product_type'] != 'USB-6211':
         print('')
-        warning('National Instruments Dev1 is not USB-6211. Continuing in test mode.')
-    #elif NIDevInfo['Dev2']['product_type'] != 'USB-6001':
-    #    warning('National Instruments Dev2 is not USB-6001. Continuing in test mode.')
+        warning('National Instruments Dev3 is not USB-6211. Continuing in test mode.')
     else:
         dac_present=True
     return dac_present
@@ -132,8 +126,8 @@ class GalvoDriver(QWidget):
         self.hide()
     def createTask(self):
         self.analog_output = Task()
-        self.analog_output.CreateAOVoltageChan("Dev1/ao0","",-10.0,10.0,DAQmx_Val_Volts,None) # sine wave
-        self.analog_output.CreateAOVoltageChan("Dev1/ao1","",-10.0,10.0,DAQmx_Val_Volts,None) # cosine wave
+        self.analog_output.CreateAOVoltageChan("Dev3/ao0","",-10.0,10.0,DAQmx_Val_Volts,None) # sine wave
+        self.analog_output.CreateAOVoltageChan("Dev3/ao1","",-10.0,10.0,DAQmx_Val_Volts,None) # cosine wave
         # self.analog_output.CreateAOVoltageChan("Dev1/ao4","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao4 is pin 60 and ground is 59
         # self.analog_output.CreateAOVoltageChan("Dev1/ao5","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao5 is pin 28 and ground is 29. This is blue laser
         # self.analog_output.CreateAOVoltageChan("Dev1/ao6","",-10.0,10.0,DAQmx_Val_Volts,None) #On the NI PCI-6733, ao6 is pin 30 and ground is 31. This is green laser
