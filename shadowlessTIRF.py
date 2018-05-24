@@ -99,8 +99,6 @@ class Settings:
             a['blue_laser_power']=5 #in volts
             a['ttl_in_sinewave']=False # When this is true, the sine wave will be added to the ttl pulse
             self.d=[a,a.copy(),a.copy(),a.copy()]
-        if 'ttl_in_sinewave' not in self.keys():
-            self['ttl_in_sinewave'] = False
     def __getitem__(self, item):
         return self.d[self.i][item]
     def __setitem__(self,key,item):
