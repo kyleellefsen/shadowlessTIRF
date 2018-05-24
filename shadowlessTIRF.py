@@ -97,7 +97,10 @@ class Settings:
             a['green_laser']=False
             a['green_laser_power']=5 #in volts
             a['blue_laser_power']=5 #in volts
+            a['ttl_in_sinewave']=False # When this is true, the sine wave will be added to the ttl pulse
             self.d=[a,a.copy(),a.copy(),a.copy()]
+        if 'ttl_in_sinewave' not in self.keys():
+            self['ttl_in_sinewave'] = False
     def __getitem__(self, item):
         return self.d[self.i][item]
     def __setitem__(self,key,item):
@@ -159,6 +162,17 @@ class GalvoDriver(QWidget):
             camera_ttl[0]=5
         camera_ttl=np.zeros(len(t))
         camera_ttl[0]=5
+
+
+        ################################################################
+        ##### This adds a TTL pulse to the beginning of the sine wave
+        ##### Kyle made this edit May 23, 2018. Comment to undo.
+        if self.settings['ttl_in_sinewave']:
+            sinwave[0] = 5
+        ################################################################
+
+
+
         return sinwave, coswave
     def calculate(self):
         s=self.settings
@@ -426,6 +440,8 @@ class MainGui(QWidget):
         self.items.append({'name':'green_laser','string':'Green Laser On','object':CheckBox()})
         self.items.append({'name':'blue_laser_power','string':'Blue Laser Power','object':blue_laser_power})
         self.items.append({'name':'green_laser_power','string':'Green Laser Power','object':green_laser_power})
+        ttl_in_sinewave = CheckBox()
+        self.items.append({'name':'ttl_in_sinewave','string':'TTL in sinewave','object':ttl_in_sinewave})
         alternate12=CheckBox(); alternate123=CheckBox();
         self.items.append({'name':'alternate12','string':'Alternate between Setting 1 and Setting 2 every cycle','object':alternate12})
         self.items.append({'name':'alternate123','string':'Alternate between Setting 1, 2, and 3 every cycle','object':alternate123})
